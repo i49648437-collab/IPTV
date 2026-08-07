@@ -1,4 +1,3 @@
-<!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
@@ -55,7 +54,6 @@
             max-height: 95vh;
         }
 
-        /* Хедер с табами */
         .header-tabs {
             display: flex;
             background: var(--bg-tertiary);
@@ -104,7 +102,6 @@
             display: flex;
         }
 
-        /* Видео контейнер */
         .video-container {
             background: #000;
             position: relative;
@@ -126,28 +123,6 @@
             outline: none;
         }
 
-        .pause-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 4rem;
-            color: white;
-            opacity: 0;
-            transition: opacity 0.3s;
-            pointer-events: none;
-            text-shadow: 0 0 20px rgba(0,0,0,0.8);
-            background: rgba(0,0,0,0.1);
-        }
-
-        .pause-overlay.visible {
-            opacity: 1;
-        }
-
         .no-stream {
             color: var(--text-muted);
             font-size: 1rem;
@@ -164,7 +139,6 @@
             opacity: 0.7;
         }
 
-        /* Контрол панель */
         .controls-panel {
             padding: 1rem;
             background: var(--bg-secondary);
@@ -278,32 +252,6 @@
             color: var(--danger);
         }
 
-        .btn-pause {
-            position: absolute;
-            bottom: 10px;
-            right: 10px;
-            background: rgba(0,0,0,0.7);
-            border: 1px solid rgba(255,255,255,0.3);
-            color: white;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            cursor: pointer;
-            font-size: 1.2rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 10;
-            transition: 0.2s;
-            backdrop-filter: blur(5px);
-            -webkit-backdrop-filter: blur(5px);
-        }
-
-        .btn-pause:hover {
-            background: rgba(0,0,0,0.9);
-            border-color: white;
-        }
-
         .file-input-label {
             cursor: pointer;
             background: var(--bg-tertiary);
@@ -335,7 +283,6 @@
             min-width: 100px;
         }
 
-        /* Список каналов */
         .channel-list {
             background: var(--bg-tertiary);
             border-radius: 1rem;
@@ -423,7 +370,6 @@
             color: white;
         }
 
-        /* Сохраненные плейлисты */
         .saved-item {
             display: flex;
             align-items: center;
@@ -478,7 +424,6 @@
             color: var(--text-muted);
         }
 
-        /* Индикатор загрузки */
         .loading-spinner {
             display: inline-block;
             width: 16px;
@@ -493,7 +438,27 @@
             to { transform: rotate(360deg); }
         }
 
-        /* Адаптивность */
+        .app-footer {
+            padding: 0.8rem;
+            text-align: center;
+            background: var(--bg-tertiary);
+            border-top: 1px solid var(--border);
+            font-size: 0.8rem;
+            flex-shrink: 0;
+        }
+
+        .app-footer a {
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 500;
+            transition: 0.2s;
+        }
+
+        .app-footer a:hover {
+            text-decoration: underline;
+            color: #5eead4;
+        }
+
         @media (max-width: 768px) {
             .player-app {
                 border-radius: 1.2rem;
@@ -560,7 +525,6 @@
             }
         }
 
-        /* Скроллбар */
         ::-webkit-scrollbar {
             width: 4px;
         }
@@ -582,8 +546,6 @@
         <video id="videoPlayer" controls playsinline crossorigin="anonymous" webkit-playsinline>
             Ваш браузер не поддерживает видео.
         </video>
-        <button class="btn-pause" id="pauseBtn" title="Пауза/Воспроизведение">⏯️</button>
-        <div class="pause-overlay" id="pauseOverlay">⏸️</div>
         <div id="noStreamPlaceholder" class="no-stream">
             <span>📡</span>
             <p>Загрузите плейлист или поток</p>
@@ -672,16 +634,21 @@
             <div id="epgStatus" style="color: var(--text-muted); font-size: 0.8rem;"></div>
         </div>
     </div>
+
+    <!-- Футер с проверенным плейлистом -->
+    <footer class="app-footer">
+        <a>
+            Проверенный плейлист:
+            https://raw.githubusercontent.com/i49648437-collab/M3U/refs/heads/main/rus.M3U
+        </a>
+    </footer>
 </div>
 
 <script>
     (function() {
-        // ---------- DOM элементы ----------
         const video = document.getElementById('videoPlayer');
         const videoContainer = document.getElementById('videoContainer');
         const noStreamDiv = document.getElementById('noStreamPlaceholder');
-        const pauseBtn = document.getElementById('pauseBtn');
-        const pauseOverlay = document.getElementById('pauseOverlay');
         const m3uUrlInput = document.getElementById('m3uUrlInput');
         const m3uFileInput = document.getElementById('m3uFileInput');
         const savePlaylistBtn = document.getElementById('savePlaylistBtn');
@@ -703,14 +670,12 @@
         const tabButtons = document.querySelectorAll('.tab-btn');
         const tabContents = document.querySelectorAll('.tab-content');
 
-        // ---------- Состояние ----------
         let channels = [];
         let activeChannelIndex = -1;
         let currentPlaylistSource = '';
         let epgData = {};
         let currentSearchQuery = '';
 
-        // ---------- Локальное хранилище ----------
         const STORAGE_KEY = 'iptv_player_saved_items';
         const EPG_STORAGE_KEY = 'iptv_player_epg_data';
 
@@ -793,7 +758,6 @@
             }
         }
 
-        // ---------- EPG функции ----------
         function parseXmltv(xmlText) {
             const parser = new DOMParser();
             const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
@@ -831,4 +795,537 @@
             const day = dateStr.substring(6, 8);
             const hour = dateStr.substring(8, 10);
             const min = dateStr.substring(10, 12);
-            return `${day}.${month}.
+            return `${day}.${month}.${year} ${hour}:${min}`;
+        }
+
+        function matchChannelToEpg(channelName) {
+            const normalizedName = channelName.toLowerCase().replace(/[^a-zа-я0-9]/g, '');
+            
+            for (let epgChannel in epgData) {
+                const normalizedEpg = epgChannel.toLowerCase().replace(/[^a-zа-я0-9]/g, '');
+                if (normalizedName.includes(normalizedEpg) || normalizedEpg.includes(normalizedName)) {
+                    return epgData[epgChannel];
+                }
+            }
+            return null;
+        }
+
+        function getCurrentProgram(channelName) {
+            const programs = matchChannelToEpg(channelName);
+            if (!programs || programs.length === 0) return null;
+
+            const now = new Date();
+            for (let prog of programs) {
+                if (prog.start && prog.stop) {
+                    const startDate = parseDate(prog.start);
+                    const stopDate = parseDate(prog.stop);
+                    if (startDate && stopDate && now >= startDate && now <= stopDate) {
+                        return prog;
+                    }
+                }
+            }
+            return null;
+        }
+
+        function parseDate(dateStr) {
+            try {
+                const parts = dateStr.split(' ');
+                if (parts.length !== 2) return null;
+                const dateParts = parts[0].split('.');
+                const timeParts = parts[1].split(':');
+                if (dateParts.length === 3 && timeParts.length === 2) {
+                    return new Date(
+                        parseInt(dateParts[2]),
+                        parseInt(dateParts[1]) - 1,
+                        parseInt(dateParts[0]),
+                        parseInt(timeParts[0]),
+                        parseInt(timeParts[1])
+                    );
+                }
+            } catch (e) {
+                return null;
+            }
+            return null;
+        }
+
+        function updateEpgStatus() {
+            const count = Object.keys(epgData).length;
+            epgStatus.textContent = `📅 Загружено EPG для ${count} каналов`;
+        }
+
+        function switchTab(tabName) {
+            tabButtons.forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.tab === tabName);
+            });
+            tabContents.forEach(content => {
+                content.classList.toggle('active', content.id === `tab-${tabName}`);
+            });
+            if (tabName === 'saved') {
+                renderSavedItems();
+            }
+        }
+
+        tabButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                switchTab(btn.dataset.tab);
+            });
+        });
+
+        function updateUIAfterChannels() {
+            renderChannelList();
+            channelCountSpan.textContent = `${channels.length} каналов`;
+            if (channels.length > 0) {
+                statusText.textContent = `✅ Загружено ${channels.length} каналов`;
+                statusText.style.color = 'var(--success)';
+            } else {
+                statusText.textContent = '⚪ Нет каналов';
+                statusText.style.color = 'var(--text-muted)';
+            }
+        }
+
+        function resetPlayer() {
+            video.pause();
+            video.removeAttribute('src');
+            video.load();
+            noStreamDiv.style.display = 'flex';
+            video.style.display = 'none';
+            activeChannelIndex = -1;
+            renderChannelList();
+        }
+
+        function showVideo() {
+            noStreamDiv.style.display = 'none';
+            video.style.display = 'block';
+        }
+
+        function setStatus(message, isError = false) {
+            statusText.innerHTML = message;
+            statusText.style.color = isError ? 'var(--danger)' : 'var(--text-muted)';
+        }
+
+        function parseM3U(content) {
+            const lines = content.split(/\r?\n/);
+            const parsed = [];
+            let currentName = '';
+
+            for (let line of lines) {
+                line = line.trim();
+                if (line.startsWith('#EXTINF:')) {
+                    const commaIndex = line.indexOf(',');
+                    if (commaIndex !== -1) {
+                        currentName = line.substring(commaIndex + 1).trim();
+                    } else {
+                        const tvgMatch = line.match(/tvg-name="([^"]*)"/);
+                        if (tvgMatch) {
+                            currentName = tvgMatch[1].trim();
+                        } else {
+                            currentName = 'Без имени';
+                        }
+                    }
+                } else if (line && !line.startsWith('#') && 
+                          (line.startsWith('http') || line.startsWith('https') || 
+                           line.startsWith('rtmp') || line.startsWith('rtsp'))) {
+                    const name = currentName || 'Канал ' + (parsed.length + 1);
+                    parsed.push({ name: name, url: line });
+                    currentName = '';
+                }
+            }
+            return parsed;
+        }
+
+        function loadPlaylistFromText(text, sourceLabel = '') {
+            const newChannels = parseM3U(text);
+            if (newChannels.length === 0) {
+                setStatus('⚠️ Плейлист не содержит каналов', true);
+                channels = [];
+                updateUIAfterChannels();
+                resetPlayer();
+                return;
+            }
+            channels = newChannels;
+            currentPlaylistSource = sourceLabel;
+            currentSearchQuery = '';
+            searchInput.value = '';
+            updateUIAfterChannels();
+            setStatus(`📋 Загружено ${channels.length} каналов${sourceLabel ? ' из ' + sourceLabel : ''}`);
+            resetPlayer();
+        }
+
+        async function fetchM3UFromUrl(url) {
+            setStatus('⏳ Загрузка плейлиста...');
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const text = await response.text();
+                loadPlaylistFromText(text, url);
+                addSavedItem({
+                    type: 'playlist',
+                    name: 'Плейлист: ' + (url.split('/').pop() || url),
+                    url: url,
+                    data: text,
+                    channels: channels.length
+                });
+            } catch (error) {
+                setStatus(`❌ Ошибка: ${error.message}`, true);
+                channels = [];
+                updateUIAfterChannels();
+                resetPlayer();
+            }
+        }
+
+        function playChannel(index) {
+            if (index < 0 || index >= channels.length) {
+                setStatus('❌ Неверный канал', true);
+                return;
+            }
+            const channel = channels[index];
+            video.src = channel.url;
+            video.play().then(() => {
+                showVideo();
+                activeChannelIndex = index;
+                renderChannelList();
+                setStatus(`▶️ ${channel.name}`);
+            }).catch(() => {
+                showVideo();
+                activeChannelIndex = index;
+                renderChannelList();
+                setStatus(`⏸️ ${channel.name} (нажмите play)`);
+            });
+            video.onerror = () => {
+                setStatus(`❌ Ошибка потока: ${channel.name}`, true);
+            };
+        }
+
+        function playDirectUrl(url, name = 'Прямой поток') {
+            if (!url) {
+                setStatus('⚠️ Введите ссылку', true);
+                return;
+            }
+            channels = [{ name: name, url: url }];
+            activeChannelIndex = 0;
+            updateUIAfterChannels();
+            playChannel(0);
+            switchTab('playlist');
+        }
+
+        function renderChannelList() {
+            channelListContainer.innerHTML = '';
+            let filteredChannels = channels;
+            
+            if (currentSearchQuery) {
+                const query = currentSearchQuery.toLowerCase();
+                filteredChannels = channels.filter(ch => 
+                    ch.name.toLowerCase().includes(query)
+                );
+            }
+
+            if (filteredChannels.length === 0) {
+                channelListContainer.innerHTML = '<div class="empty-state">' + 
+                    (currentSearchQuery ? 'Каналы не найдены' : 'Список каналов пуст') + 
+                    '</div>';
+                return;
+            }
+
+            filteredChannels.forEach((ch, idx) => {
+                const originalIndex = channels.indexOf(ch);
+                const currentProgram = getCurrentProgram(ch.name);
+                const item = document.createElement('div');
+                item.className = `channel-item ${originalIndex === activeChannelIndex ? 'active' : ''}`;
+                
+                let epgHtml = '';
+                if (currentProgram) {
+                    epgHtml = `<div class="epg-info" title="${escapeHtml(currentProgram.title)}${currentProgram.desc ? '\n' + escapeHtml(currentProgram.desc) : ''}">
+                        🕐 ${escapeHtml(currentProgram.title)}
+                    </div>`;
+                }
+
+                item.innerHTML = `
+                    <div class="channel-name">
+                        <span>📺</span>
+                        <span>${escapeHtml(ch.name)}</span>
+                    </div>
+                    ${epgHtml}
+                    <div class="channel-actions">
+                        <button class="icon-btn save-stream-btn" title="Сохранить поток">💾</button>
+                    </div>
+                `;
+                
+                item.addEventListener('click', (e) => {
+                    if (!e.target.closest('.save-stream-btn')) {
+                        playChannel(originalIndex);
+                    }
+                });
+                
+                item.querySelector('.save-stream-btn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    addSavedItem({
+                        type: 'stream',
+                        name: ch.name,
+                        url: ch.url
+                    });
+                });
+                
+                channelListContainer.appendChild(item);
+            });
+        }
+
+        function renderSavedItems() {
+            savedListContainer.innerHTML = '';
+            const items = getSavedItems();
+            if (items.length === 0) {
+                savedListContainer.innerHTML = '<div class="empty-state">Нет сохранённых элементов</div>';
+                return;
+            }
+            items.reverse().forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'saved-item';
+                const typeIcon = item.type === 'playlist' ? '📋' : item.type === 'epg' ? '📅' : '🔗';
+                const typeLabel = item.type === 'playlist' ? 'Плейлист' : item.type === 'epg' ? 'EPG' : 'Поток';
+                div.innerHTML = `
+                    <div class="saved-info">
+                        <div class="saved-name">${typeIcon} ${escapeHtml(item.name || 'Без имени')}</div>
+                        <div class="saved-url">${escapeHtml(item.url || '')}</div>
+                        <div class="saved-meta">${typeLabel} • ${item.date || ''} ${item.channels ? '• ' + item.channels + ' каналов' : ''}</div>
+                    </div>
+                    <div style="display: flex; gap: 0.3rem;">
+                        <button class="btn btn-small btn-outline load-saved-btn">▶️</button>
+                        <button class="btn btn-small btn-danger delete-saved-btn">🗑️</button>
+                    </div>
+                `;
+                div.querySelector('.load-saved-btn').addEventListener('click', () => loadSavedItem(item));
+                div.querySelector('.delete-saved-btn').addEventListener('click', () => removeSavedItem(item.id));
+                savedListContainer.appendChild(div);
+            });
+        }
+
+        function escapeHtml(text) {
+            return String(text)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        searchInput.addEventListener('input', (e) => {
+            currentSearchQuery = e.target.value.trim();
+            renderChannelList();
+        });
+
+        clearSearchBtn.addEventListener('click', () => {
+            searchInput.value = '';
+            currentSearchQuery = '';
+            renderChannelList();
+        });
+
+        m3uUrlInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                const url = m3uUrlInput.value.trim();
+                if (url) fetchM3UFromUrl(url);
+            }
+        });
+
+        m3uFileInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+            setStatus('📂 Чтение файла...');
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                loadPlaylistFromText(e.target.result, file.name);
+                addSavedItem({
+                    type: 'playlist',
+                    name: 'Файл: ' + file.name,
+                    url: '',
+                    data: e.target.result,
+                    channels: channels.length
+                });
+            };
+            reader.onerror = () => setStatus('❌ Ошибка чтения файла', true);
+            reader.readAsText(file, 'UTF-8');
+            m3uFileInput.value = '';
+        });
+
+        savePlaylistBtn.addEventListener('click', () => {
+            if (channels.length === 0) {
+                setStatus('⚠️ Нет каналов для сохранения', true);
+                return;
+            }
+            let m3uContent = '#EXTM3U\n';
+            channels.forEach(ch => {
+                m3uContent += `#EXTINF:-1,${ch.name}\n${ch.url}\n`;
+            });
+            const name = prompt('Название плейлиста:', currentPlaylistSource || 'Мой плейлист');
+            if (name) {
+                addSavedItem({
+                    type: 'playlist',
+                    name: name,
+                    url: currentPlaylistSource || '',
+                    data: m3uContent,
+                    channels: channels.length
+                });
+            }
+        });
+
+        playDirectBtn.addEventListener('click', () => {
+            const url = directUrlInput.value.trim();
+            if (url) {
+                playDirectUrl(url, 'Прямой поток');
+                addSavedItem({
+                    type: 'stream',
+                    name: 'Поток: ' + (url.split('/').pop() || url),
+                    url: url
+                });
+            }
+        });
+
+        saveDirectBtn.addEventListener('click', () => {
+            const url = directUrlInput.value.trim();
+            if (!url) {
+                setStatus('⚠️ Введите URL потока', true);
+                return;
+            }
+            const name = prompt('Название потока:', url.split('/').pop() || 'Поток');
+            if (name) {
+                addSavedItem({
+                    type: 'stream',
+                    name: name,
+                    url: url
+                });
+            }
+        });
+
+        directUrlInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') playDirectBtn.click();
+        });
+
+        loadEpgBtn.addEventListener('click', async () => {
+            const url = epgUrlInput.value.trim();
+            if (!url) {
+                setStatus('⚠️ Введите URL EPG', true);
+                return;
+            }
+            setStatus('⏳ Загрузка EPG...');
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const text = await response.text();
+                
+                epgData = parseXmltv(text);
+                saveEpgToStorage(epgData);
+                updateEpgStatus();
+                renderChannelList();
+                setStatus('✅ EPG загружен');
+                
+                addSavedItem({
+                    type: 'epg',
+                    name: 'EPG: ' + (url.split('/').pop() || url),
+                    url: url,
+                    data: epgData
+                });
+            } catch (error) {
+                setStatus(`❌ Ошибка загрузки EPG: ${error.message}`, true);
+            }
+        });
+
+        epgFileInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+            setStatus('📂 Чтение EPG файла...');
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                epgData = parseXmltv(e.target.result);
+                saveEpgToStorage(epgData);
+                updateEpgStatus();
+                renderChannelList();
+                setStatus('✅ EPG загружен из файла');
+                addSavedItem({
+                    type: 'epg',
+                    name: 'EPG файл: ' + file.name,
+                    url: '',
+                    data: epgData
+                });
+            };
+            reader.onerror = () => setStatus('❌ Ошибка чтения EPG файла', true);
+            reader.readAsText(file, 'UTF-8');
+            epgFileInput.value = '';
+        });
+
+        epgUrlInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') loadEpgBtn.click();
+        });
+
+        exportAllBtn.addEventListener('click', () => {
+            const items = getSavedItems();
+            if (items.length === 0) {
+                setStatus('⚠️ Нет данных для экспорта', true);
+                return;
+            }
+            const exportData = JSON.stringify(items, null, 2);
+            const blob = new Blob([exportData], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'iptv_backup_' + new Date().toISOString().slice(0, 10) + '.json';
+            a.click();
+            URL.revokeObjectURL(url);
+            setStatus('📤 Экспортировано!');
+        });
+
+        clearAllBtn.addEventListener('click', () => {
+            if (confirm('Удалить ВСЕ сохранённые элементы? Это действие нельзя отменить.')) {
+                saveItems([]);
+                renderSavedItems();
+                setStatus('🗑️ Всё очищено');
+            }
+        });
+
+        video.style.display = 'none';
+        noStreamDiv.style.display = 'flex';
+        setStatus('🟢 Готов к работе');
+
+        video.addEventListener('error', () => {
+            const name = activeChannelIndex >= 0 ? channels[activeChannelIndex]?.name : 'поток';
+            setStatus(`❌ Ошибка: ${name}`, true);
+        });
+
+        video.addEventListener('playing', () => {
+            if (activeChannelIndex >= 0 && channels[activeChannelIndex]) {
+                setStatus(`▶️ ${channels[activeChannelIndex].name}`);
+            }
+        });
+
+        epgData = loadEpgFromStorage();
+        updateEpgStatus();
+        renderSavedItems();
+
+        let touchStartX = 0;
+        document.addEventListener('touchstart', (e) => {
+            touchStartX = e.touches[0].clientX;
+        });
+
+        document.addEventListener('touchend', (e) => {
+            const touchEndX = e.changedTouches[0].clientX;
+            const diff = touchStartX - touchEndX;
+            if (Math.abs(diff) > 80) {
+                const tabs = ['playlist', 'saved', 'direct', 'epg'];
+                const currentTab = document.querySelector('.tab-btn.active')?.dataset.tab;
+                const currentIndex = tabs.indexOf(currentTab);
+                if (diff > 0 && currentIndex < tabs.length - 1) {
+                    switchTab(tabs[currentIndex + 1]);
+                } else if (diff < 0 && currentIndex > 0) {
+                    switchTab(tabs[currentIndex - 1]);
+                }
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'ArrowLeft' && video.duration) {
+                video.currentTime = Math.max(0, video.currentTime - 10);
+            } else if (e.code === 'ArrowRight' && video.duration) {
+                video.currentTime = Math.min(video.duration, video.currentTime + 10);
+            }
+        });
+    })();
+</script>
+</body>
+    </html>
