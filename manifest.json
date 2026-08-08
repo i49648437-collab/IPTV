@@ -2,7 +2,7 @@
   "name": "IPTV Player Pro",
   "short_name": "IPTV Pro",
   "description": "Продвинутый IPTV плеер с поддержкой M3U, M3U8 и EPG",
-  "start_url": "/",
+  "start_url": ".",
   "scope": "/",
   "display": "standalone",
   "orientation": "any",
