@@ -662,7 +662,6 @@
 </head>
 <body>
     <div class="player-app">
-        <!-- Видео плеер -->
         <div class="video-container" id="videoContainer">
             <video id="videoPlayer" controls playsinline crossorigin="anonymous" webkit-playsinline>
                 Ваш браузер не поддерживает видео.
@@ -673,7 +672,6 @@
             </div>
         </div>
 
-        <!-- Табы -->
         <div class="header-tabs">
             <button class="tab-btn active" data-tab="playlist">📋 Плейлист</button>
             <button class="tab-btn" data-tab="saved">💾 Сохранённые</button>
@@ -681,7 +679,6 @@
             <button class="tab-btn" data-tab="epg">📅 EPG</button>
         </div>
 
-        <!-- Контент табов -->
         <div class="tab-content active" id="tab-playlist">
             <div class="controls-panel">
                 <div class="search-input-group">
@@ -695,12 +692,11 @@
                 </div>
                 <div class="action-row">
                     <button class="btn" id="loadM3uBtn" style="flex:1.2;">🔄 Загрузить</button>
-                    <button class="btn btn-outline" id="addM3uBtn" style="flex:1.2;" title="Добавить каналы к текущему списку">➕ Добавить</button>
+                    <button class="btn btn-outline" id="addM3uBtn" style="flex:1.2;" title="Добавить каналы">➕ Добавить</button>
                     <label for="m3uFileInput" class="file-input-label" style="flex:1;">
-                        📂 Файл
+                        📂 Файлы
                     </label>
-                    <!-- Добавлены атрибуты webkitdirectory directory для выбора папки -->
-                    <input type="file" id="m3uFileInput" accept=".m3u,.m3u8,.txt" webkitdirectory directory>
+                    <input type="file" id="m3uFileInput" accept=".m3u,.m3u8,.txt" multiple>
                 </div>
                 <div class="action-row" style="gap:0.3rem;">
                     <select id="groupFilterSelect" style="flex:2;background:var(--bg-tertiary);border:1px solid var(--border);color:var(--text-primary);padding:0.5rem 0.7rem;border-radius:2rem;font-size:0.75rem;outline:none;min-width:0;">
@@ -736,12 +732,12 @@
         <div class="tab-content" id="tab-direct">
             <div class="controls-panel">
                 <div class="url-input-group">
-                    <input type="text" id="directUrlInput" placeholder="Вставьте прямую ссылку на поток (m3u8, mp4 и др.)" autocomplete="off">
+                    <input type="text" id="directUrlInput" placeholder="Вставьте прямую ссылку на поток" autocomplete="off">
                 </div>
                 <div class="action-row">
                     <button class="btn" id="playDirectBtn">▶️ Воспроизвести</button>
                     <button class="btn btn-outline" id="saveDirectBtn">💾 Сохранить поток</button>
-                    <button class="btn btn-outline" id="addDirectToPlaylistBtn" title="Добавить этот поток как канал в текущий плейлист">➕ В плейлист</button>
+                    <button class="btn btn-outline" id="addDirectToPlaylistBtn" title="Добавить этот поток в плейлист">➕ В плейлист</button>
                 </div>
                 <div style="color: var(--text-muted); font-size: 0.8rem; padding: 0.5rem;">
                     💡 Поддерживаются HLS (.m3u8), DASH, MP4 и другие форматы
@@ -752,7 +748,7 @@
         <div class="tab-content" id="tab-epg">
             <div class="controls-panel">
                 <div class="url-input-group">
-                    <input type="text" id="epgUrlInput" placeholder="Ссылка на EPG (XMLTV) или вставьте данные..." autocomplete="off">
+                    <input type="text" id="epgUrlInput" placeholder="Ссылка на EPG (XMLTV)" autocomplete="off">
                 </div>
                 <div class="action-row">
                     <button class="btn" id="loadEpgBtn">📥 Загрузить EPG</button>
@@ -768,7 +764,6 @@
             </div>
         </div>
 
-        <!-- Футер -->
         <footer class="app-footer">
             <span style="white-space:nowrap;">📋 Пример:</span>
             <code class="footer-link" id="footerLink" title="Нажмите чтобы скопировать">https://raw.githubusercontent.com/i49648437-collab/M3U/refs/heads/main/rus.m3u</code>
@@ -783,7 +778,6 @@
     <script>
         (function() {
             const video = document.getElementById('videoPlayer');
-            const videoContainer = document.getElementById('videoContainer');
             const noStreamDiv = document.getElementById('noStreamPlaceholder');
             const m3uUrlInput = document.getElementById('m3uUrlInput');
             const m3uFileInput = document.getElementById('m3uFileInput');
@@ -832,11 +826,9 @@
             function getSavedItems() {
                 try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch (e) { return []; }
             }
-
             function saveItems(items) {
                 try { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); } catch (e) { setStatus('❌ Ошибка сохранения', true); }
             }
-
             function saveEpgToStorage(data) {
                 try { localStorage.setItem(EPG_STORAGE_KEY, JSON.stringify(data)); } catch (e) {
                     const trimmed = {};
@@ -844,7 +836,6 @@
                     localStorage.setItem(EPG_STORAGE_KEY, JSON.stringify(trimmed));
                 }
             }
-
             function loadEpgFromStorage() {
                 try { return JSON.parse(localStorage.getItem(EPG_STORAGE_KEY)) || {}; } catch (e) { return {}; }
             }
@@ -970,7 +961,6 @@
                 tabContents.forEach(content => content.classList.toggle('active', content.id === `tab-${tabName}`));
                 if (tabName === 'saved') renderSavedItems();
             }
-
             tabButtons.forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
 
             function updateUIAfterChannels() {
@@ -1001,7 +991,6 @@
                 statusText.style.color = isError ? 'var(--danger)' : 'var(--text-muted)';
             }
 
-            // Преобразование относительных URL в абсолютные
             function resolveUrl(relativeUrl, baseUrl) {
                 if (!baseUrl) return relativeUrl;
                 try { return new URL(relativeUrl, baseUrl).href; } catch (e) { return relativeUrl; }
@@ -1011,6 +1000,7 @@
                 const lines = content.split(/\r?\n/);
                 const parsed = [];
                 let currentName = '', currentId = '', currentGroup = '';
+
                 for (let line of lines) {
                     line = line.trim();
                     if (line.startsWith('#EXTINF:')) {
@@ -1023,11 +1013,14 @@
                         if (commaIndex !== -1) currentName = line.substring(commaIndex + 1).trim();
                         else if (tvgNameMatch) currentName = tvgNameMatch[1].trim();
                         else currentName = 'Без имени';
-                    } else if (line && !line.startsWith('#') && /^(https?|rtmp|rtsp):\/\//i.test(line) || !line.includes('://')) {
-                        const finalUrl = resolveUrl(line, baseUrl);
-                        const name = currentName || 'Канал ' + (parsed.length + 1);
-                        parsed.push({ name, url: finalUrl, id: currentId || undefined, group: currentGroup || 'Без группы' });
-                        currentName = ''; currentId = ''; currentGroup = '';
+                    } else if (line && !line.startsWith('#')) {
+                        // Принимаем как абсолютные URL, так и относительные пути (без http)
+                        if (/^(https?|rtmp|rtsp):\/\//i.test(line) || !line.includes('://')) {
+                            const finalUrl = resolveUrl(line, baseUrl);
+                            const name = currentName || 'Канал ' + (parsed.length + 1);
+                            parsed.push({ name, url: finalUrl, id: currentId || undefined, group: currentGroup || 'Без группы' });
+                            currentName = ''; currentId = ''; currentGroup = '';
+                        }
                     }
                 }
                 return parsed;
@@ -1072,9 +1065,8 @@
                     const response = await fetch(url);
                     if (!response.ok) throw new Error(`HTTP ${response.status}`);
                     const text = await response.text();
-                    const baseUrl = url;
-                    if (addMode) addPlaylistFromText(text, url, baseUrl);
-                    else loadPlaylistFromText(text, url, baseUrl);
+                    if (addMode) addPlaylistFromText(text, url, url);
+                    else loadPlaylistFromText(text, url, url);
                     addSavedItem({ type: 'playlist', name: 'Плейлист: ' + (url.split('/').pop() || url), url: url, data: text, channels: channels.length });
                 } catch (error) {
                     setStatus(`❌ Ошибка: ${error.message}`, true);
@@ -1334,7 +1326,6 @@
             });
             m3uUrlInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') loadM3uBtn.click(); });
 
-            // Выбор папки/файлов
             m3uFileInput.addEventListener('change', async (event) => {
                 const files = event.target.files;
                 if (!files || files.length === 0) return;
@@ -1441,4 +1432,4 @@
         }
     </script>
 </body>
-    </html>
+</html>
