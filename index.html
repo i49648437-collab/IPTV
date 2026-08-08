@@ -699,7 +699,8 @@
                     <label for="m3uFileInput" class="file-input-label" style="flex:1;">
                         📂 Файл
                     </label>
-                    <input type="file" id="m3uFileInput" accept=".m3u,.m3u8,.txt">
+                    <!-- Добавлены атрибуты webkitdirectory directory для выбора папки -->
+                    <input type="file" id="m3uFileInput" accept=".m3u,.m3u8,.txt" webkitdirectory directory>
                 </div>
                 <div class="action-row" style="gap:0.3rem;">
                     <select id="groupFilterSelect" style="flex:2;background:var(--bg-tertiary);border:1px solid var(--border);color:var(--text-primary);padding:0.5rem 0.7rem;border-radius:2rem;font-size:0.75rem;outline:none;min-width:0;">
@@ -829,50 +830,29 @@
             const FOOTER_URL = 'https://raw.githubusercontent.com/i49648437-collab/M3U/refs/heads/main/rus.m3u';
 
             function getSavedItems() {
-                try {
-                    const data = localStorage.getItem(STORAGE_KEY);
-                    return data ? JSON.parse(data) : [];
-                } catch (e) {
-                    return [];
-                }
+                try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch (e) { return []; }
             }
 
             function saveItems(items) {
-                try {
-                    localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-                } catch (e) {
-                    setStatus('❌ Ошибка сохранения: хранилище переполнено', true);
-                }
+                try { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); } catch (e) { setStatus('❌ Ошибка сохранения', true); }
             }
 
             function saveEpgToStorage(data) {
-                try {
-                    localStorage.setItem(EPG_STORAGE_KEY, JSON.stringify(data));
-                } catch (e) {
+                try { localStorage.setItem(EPG_STORAGE_KEY, JSON.stringify(data)); } catch (e) {
                     const trimmed = {};
-                    for (const [ch, programs] of Object.entries(data)) {
-                        trimmed[ch] = programs.slice(0, 5);
-                    }
+                    for (const [ch, programs] of Object.entries(data)) trimmed[ch] = programs.slice(0, 5);
                     localStorage.setItem(EPG_STORAGE_KEY, JSON.stringify(trimmed));
                 }
             }
 
             function loadEpgFromStorage() {
-                try {
-                    const data = localStorage.getItem(EPG_STORAGE_KEY);
-                    return data ? JSON.parse(data) : {};
-                } catch (e) {
-                    return {};
-                }
+                try { return JSON.parse(localStorage.getItem(EPG_STORAGE_KEY)) || {}; } catch (e) { return {}; }
             }
 
             function addSavedItem(item) {
                 const items = getSavedItems();
                 const exists = items.find(i => i.url === item.url && i.type === item.type);
-                if (exists && item.url) {
-                    setStatus('⚠️ Элемент с таким URL уже сохранён', true);
-                    return false;
-                }
+                if (exists && item.url) { setStatus('⚠️ Уже сохранён', true); return false; }
                 item.id = Date.now().toString();
                 item.date = new Date().toLocaleString();
                 items.push(item);
@@ -883,8 +863,7 @@
             }
 
             function removeSavedItem(id) {
-                let items = getSavedItems();
-                items = items.filter(i => i.id !== id);
+                let items = getSavedItems().filter(i => i.id !== id);
                 saveItems(items);
                 renderSavedItems();
                 setStatus('🗑️ Удалено');
@@ -892,7 +871,7 @@
 
             function loadSavedItem(item) {
                 if (item.type === 'playlist') {
-                    loadPlaylistFromText(item.data, item.name);
+                    loadPlaylistFromText(item.data, item.name, item.url || undefined);
                     switchTab('playlist');
                 } else if (item.type === 'stream') {
                     playDirectUrl(item.url, item.name);
@@ -929,13 +908,10 @@
                     const channelKey = channelId.trim();
                     if (!channelKey) continue;
                     if (!epg[channelKey]) epg[channelKey] = [];
-                    epg[channelKey].push({ title, desc, start: formatXmltvDate(start), stop: formatXmltvDate(
-                            stop) });
+                    epg[channelKey].push({ title, desc, start: formatXmltvDate(start), stop: formatXmltvDate(stop) });
                 }
                 epg._channelMap = Object.fromEntries(channelMap);
-                for (let ch in epg) {
-                    if (ch !== '_channelMap') epg[ch].sort((a, b) => (a.start || '').localeCompare(b.start || ''));
-                }
+                for (let ch in epg) if (ch !== '_channelMap') epg[ch].sort((a, b) => (a.start || '').localeCompare(b.start || ''));
                 return epg;
             }
 
@@ -949,20 +925,14 @@
                 if (channel.id && epgData[channel.id]) return epgData[channel.id];
                 const channelMap = epgData._channelMap || {};
                 for (const [epgId, epgName] of Object.entries(channelMap)) {
-                    if (epgName && channel.name && normalizeName(epgName) === normalizeName(channel.name))
-                        return epgData[epgId] || null;
+                    if (epgName && channel.name && normalizeName(epgName) === normalizeName(channel.name)) return epgData[epgId] || null;
                 }
                 const normChName = normalizeName(channel.name || '');
-                for (let key in epgData) {
-                    if (key === '_channelMap') continue;
-                    if (normalizeName(key) === normChName) return epgData[key];
-                }
+                for (let key in epgData) if (key !== '_channelMap' && normalizeName(key) === normChName) return epgData[key];
                 return null;
             }
 
-            function normalizeName(name) {
-                return name.toLowerCase().replace(/[^a-zа-я0-9]/g, '');
-            }
+            function normalizeName(name) { return name.toLowerCase().replace(/[^a-zа-я0-9]/g, ''); }
 
             function getCurrentProgram(channel) {
                 const programs = matchChannelToEpg(channel);
@@ -984,10 +954,9 @@
                     if (parts.length !== 2) return null;
                     const dateParts = parts[0].split('.');
                     const timeParts = parts[1].split(':');
-                    if (dateParts.length === 3 && timeParts.length === 2) {
+                    if (dateParts.length === 3 && timeParts.length === 2)
                         return new Date(+dateParts[2], +dateParts[1] - 1, +dateParts[0], +timeParts[0], +timeParts[1]);
-                    }
-                } catch (e) { return null; }
+                } catch (e) {}
                 return null;
             }
 
@@ -1032,13 +1001,16 @@
                 statusText.style.color = isError ? 'var(--danger)' : 'var(--text-muted)';
             }
 
-            function parseM3U(content) {
+            // Преобразование относительных URL в абсолютные
+            function resolveUrl(relativeUrl, baseUrl) {
+                if (!baseUrl) return relativeUrl;
+                try { return new URL(relativeUrl, baseUrl).href; } catch (e) { return relativeUrl; }
+            }
+
+            function parseM3U(content, baseUrl = null) {
                 const lines = content.split(/\r?\n/);
                 const parsed = [];
-                let currentName = '';
-                let currentId = '';
-                let currentGroup = '';
-
+                let currentName = '', currentId = '', currentGroup = '';
                 for (let line of lines) {
                     line = line.trim();
                     if (line.startsWith('#EXTINF:')) {
@@ -1048,94 +1020,65 @@
                         currentId = tvgIdMatch ? tvgIdMatch[1].trim() : '';
                         currentGroup = groupMatch ? groupMatch[1].trim() : '';
                         const commaIndex = line.indexOf(',');
-                        if (commaIndex !== -1) {
-                            currentName = line.substring(commaIndex + 1).trim();
-                        } else if (tvgNameMatch) {
-                            currentName = tvgNameMatch[1].trim();
-                        } else {
-                            currentName = 'Без имени';
-                        }
-                    } else if (line && !line.startsWith('#') && (line.startsWith('http') || line.startsWith('https') ||
-                            line.startsWith('rtmp') || line.startsWith('rtsp'))) {
+                        if (commaIndex !== -1) currentName = line.substring(commaIndex + 1).trim();
+                        else if (tvgNameMatch) currentName = tvgNameMatch[1].trim();
+                        else currentName = 'Без имени';
+                    } else if (line && !line.startsWith('#') && /^(https?|rtmp|rtsp):\/\//i.test(line) || !line.includes('://')) {
+                        const finalUrl = resolveUrl(line, baseUrl);
                         const name = currentName || 'Канал ' + (parsed.length + 1);
-                        parsed.push({ name, url: line, id: currentId || undefined, group: currentGroup || 'Без группы' });
-                        currentName = '';
-                        currentId = '';
-                        currentGroup = '';
+                        parsed.push({ name, url: finalUrl, id: currentId || undefined, group: currentGroup || 'Без группы' });
+                        currentName = ''; currentId = ''; currentGroup = '';
                     }
                 }
                 return parsed;
             }
 
-            function loadPlaylistFromText(text, sourceLabel = '') {
-                const newChannels = parseM3U(text);
+            function loadPlaylistFromText(text, sourceLabel = '', baseUrl = null) {
+                const newChannels = parseM3U(text, baseUrl);
                 if (newChannels.length === 0) {
-                    setStatus('⚠️ Плейлист не содержит каналов', true);
-                    channels = [];
-                    selectedChannelUrls.clear();
-                    updateUIAfterChannels();
-                    resetPlayer();
+                    setStatus('⚠️ Плейлист пуст', true);
+                    channels = []; selectedChannelUrls.clear();
+                    updateUIAfterChannels(); resetPlayer();
                     return;
                 }
                 channels = newChannels;
                 selectedChannelUrls.clear();
                 currentPlaylistSource = sourceLabel;
-                currentSearchQuery = '';
-                searchInput.value = '';
+                currentSearchQuery = ''; searchInput.value = '';
                 updateUIAfterChannels();
                 setStatus(`📋 Загружено ${channels.length} каналов${sourceLabel ? ' из ' + sourceLabel : ''}`);
                 resetPlayer();
             }
 
-            function addPlaylistFromText(text, sourceLabel = '') {
-                const newChannels = parseM3U(text);
-                if (newChannels.length === 0) {
-                    setStatus('⚠️ Добавляемый плейлист не содержит каналов', true);
-                    return;
-                }
+            function addPlaylistFromText(text, sourceLabel = '', baseUrl = null) {
+                const newChannels = parseM3U(text, baseUrl);
+                if (newChannels.length === 0) { setStatus('⚠️ Добавляемый плейлист пуст', true); return; }
                 const existingUrls = new Set(channels.map(ch => ch.url));
                 let addedCount = 0;
                 for (const ch of newChannels) {
-                    if (!existingUrls.has(ch.url)) {
-                        channels.push(ch);
-                        existingUrls.add(ch.url);
-                        addedCount++;
-                    }
+                    if (!existingUrls.has(ch.url)) { channels.push(ch); existingUrls.add(ch.url); addedCount++; }
                 }
-                if (addedCount === 0) {
-                    setStatus('⚠️ Все каналы уже присутствуют в списке (дубликаты)', true);
-                } else {
-                    currentPlaylistSource = currentPlaylistSource ? currentPlaylistSource + ' + ' + sourceLabel :
-                        sourceLabel;
+                if (addedCount === 0) setStatus('⚠️ Все каналы уже есть', true);
+                else {
+                    currentPlaylistSource = currentPlaylistSource ? currentPlaylistSource + ' + ' + sourceLabel : sourceLabel;
                     updateUIAfterChannels();
                     setStatus(`➕ Добавлено ${addedCount} новых каналов из ${sourceLabel}`);
                 }
             }
 
             async function fetchM3UFromUrl(url, addMode = false) {
-                setStatus('⏳ Загрузка плейлиста...');
+                setStatus('⏳ Загрузка...');
                 try {
                     const response = await fetch(url);
                     if (!response.ok) throw new Error(`HTTP ${response.status}`);
                     const text = await response.text();
-                    if (addMode) {
-                        addPlaylistFromText(text, url);
-                    } else {
-                        loadPlaylistFromText(text, url);
-                    }
-                    addSavedItem({
-                        type: 'playlist',
-                        name: 'Плейлист: ' + (url.split('/').pop() || url),
-                        url: url,
-                        data: text,
-                        channels: channels.length
-                    });
+                    const baseUrl = url;
+                    if (addMode) addPlaylistFromText(text, url, baseUrl);
+                    else loadPlaylistFromText(text, url, baseUrl);
+                    addSavedItem({ type: 'playlist', name: 'Плейлист: ' + (url.split('/').pop() || url), url: url, data: text, channels: channels.length });
                 } catch (error) {
                     setStatus(`❌ Ошибка: ${error.message}`, true);
-                    if (!addMode) { channels = [];
-                        selectedChannelUrls.clear();
-                        updateUIAfterChannels();
-                        resetPlayer(); }
+                    if (!addMode) { channels = []; selectedChannelUrls.clear(); updateUIAfterChannels(); resetPlayer(); }
                 }
             }
 
@@ -1168,15 +1111,10 @@
 
             function addDirectToPlaylist(url, name) {
                 if (!url) { setStatus('⚠️ Введите ссылку', true); return; }
-                const existingUrls = new Set(channels.map(ch => ch.url));
-                if (existingUrls.has(url)) {
-                    setStatus('⚠️ Этот URL уже есть в плейлисте', true);
-                    return;
-                }
-                channels.push({ name: name || 'Поток ' + (channels.length + 1), url: url, group: 'Добавленные',
-                    id: '' });
+                if (channels.some(ch => ch.url === url)) { setStatus('⚠️ URL уже в плейлисте', true); return; }
+                channels.push({ name: name || 'Поток ' + (channels.length + 1), url: url, group: 'Добавленные', id: '' });
                 updateUIAfterChannels();
-                setStatus('➕ Поток добавлен в плейлист');
+                setStatus('➕ Поток добавлен');
                 switchTab('playlist');
             }
 
@@ -1187,39 +1125,30 @@
                     if (!groups.has(g)) groups.set(g, []);
                     groups.get(g).push(ch);
                 }
-                const sortedGroups = new Map([...groups.entries()].sort((a, b) => {
-                    if (a[0] === 'Без группы') return 1;
-                    if (b[0] === 'Без группы') return -1;
-                    return a[0].localeCompare(b[0]);
-                }));
-                return sortedGroups;
+                return new Map([...groups.entries()].sort((a, b) => a[0] === 'Без группы' ? 1 : b[0] === 'Без группы' ? -1 : a[0].localeCompare(b[0])));
             }
 
             function updateGroupFilter() {
                 const groups = getChannelsByGroup();
                 const currentVal = groupFilterSelect.value;
                 groupFilterSelect.innerHTML = '<option value="all">📁 Все группы</option>';
-                for (const [groupName] of groups) {
+                for (const [groupName, groupChannels] of groups) {
                     const option = document.createElement('option');
                     option.value = groupName;
-                    option.textContent = `📁 ${groupName} (${groups.get(groupName).length})`;
+                    option.textContent = `📁 ${groupName} (${groupChannels.length})`;
                     groupFilterSelect.appendChild(option);
                 }
-                if ([...groupFilterSelect.options].some(o => o.value === currentVal)) {
-                    groupFilterSelect.value = currentVal;
-                }
+                if ([...groupFilterSelect.options].some(o => o.value === currentVal)) groupFilterSelect.value = currentVal;
             }
 
             function renderChannelList() {
                 channelListContainer.innerHTML = '';
                 const selectedGroup = groupFilterSelect.value || 'all';
                 let displayChannels = channels;
-
                 if (currentSearchQuery) {
-                    const query = currentSearchQuery.toLowerCase();
-                    displayChannels = channels.filter(ch => ch.name.toLowerCase().includes(query));
+                    const q = currentSearchQuery.toLowerCase();
+                    displayChannels = channels.filter(ch => ch.name.toLowerCase().includes(q));
                 }
-
                 const groupsMap = new Map();
                 for (const ch of displayChannels) {
                     if (selectedGroup !== 'all' && ch.group !== selectedGroup) continue;
@@ -1227,40 +1156,26 @@
                     if (!groupsMap.has(g)) groupsMap.set(g, []);
                     groupsMap.get(g).push(ch);
                 }
-                const sortedGroups = new Map([...groupsMap.entries()].sort((a, b) => {
-                    if (a[0] === 'Без группы') return 1;
-                    if (b[0] === 'Без группы') return -1;
-                    return a[0].localeCompare(b[0]);
-                }));
-
+                const sortedGroups = new Map([...groupsMap.entries()].sort((a, b) => a[0] === 'Без группы' ? 1 : b[0] === 'Без группы' ? -1 : a[0].localeCompare(b[0])));
                 if (sortedGroups.size === 0) {
-                    channelListContainer.innerHTML = '<div class="empty-state">' + (currentSearchQuery ?
-                        'Каналы не найдены' : 'Список каналов пуст') + '</div>';
+                    channelListContainer.innerHTML = '<div class="empty-state">' + (currentSearchQuery ? 'Каналы не найдены' : 'Список каналов пуст') + '</div>';
                     return;
                 }
-
                 for (const [groupName, groupChannels] of sortedGroups) {
                     const groupDiv = document.createElement('div');
                     groupDiv.className = 'channel-group';
                     const isCollapsed = collapsedGroups.has(groupName);
                     const header = document.createElement('div');
                     header.className = 'group-header' + (isCollapsed ? ' collapsed' : '');
-                    header.innerHTML =
-                        `<span class="group-arrow">▼</span> 📁 ${escapeHtml(groupName)} <span class="badge">${groupChannels.length}</span>`;
+                    header.innerHTML = `<span class="group-arrow">▼</span> 📁 ${escapeHtml(groupName)} <span class="badge">${groupChannels.length}</span>`;
                     header.addEventListener('click', () => {
-                        if (collapsedGroups.has(groupName)) {
-                            collapsedGroups.delete(groupName);
-                        } else {
-                            collapsedGroups.add(groupName);
-                        }
+                        collapsedGroups.has(groupName) ? collapsedGroups.delete(groupName) : collapsedGroups.add(groupName);
                         renderChannelList();
                     });
                     groupDiv.appendChild(header);
-
                     const channelsDiv = document.createElement('div');
                     channelsDiv.className = 'group-channels' + (isCollapsed ? ' collapsed' : '');
                     channelsDiv.style.maxHeight = isCollapsed ? '0' : (groupChannels.length * 50 + 20) + 'px';
-
                     for (const ch of groupChannels) {
                         const originalIndex = channels.indexOf(ch);
                         const currentProgram = getCurrentProgram(ch);
@@ -1268,10 +1183,7 @@
                         item.className = `channel-item ${originalIndex === activeChannelIndex ? 'active' : ''}`;
                         const isChecked = selectedChannelUrls.has(ch.url);
                         let epgHtml = '';
-                        if (currentProgram) {
-                            epgHtml =
-                                `<div class="epg-info" title="${escapeHtml(currentProgram.title)}${currentProgram.desc ? '\n' + escapeHtml(currentProgram.desc) : ''}">🕐 ${escapeHtml(currentProgram.title)}</div>`;
-                        }
+                        if (currentProgram) epgHtml = `<div class="epg-info" title="${escapeHtml(currentProgram.title)}${currentProgram.desc ? '\n' + escapeHtml(currentProgram.desc) : ''}">🕐 ${escapeHtml(currentProgram.title)}</div>`;
                         item.innerHTML = `
                             <input type="checkbox" class="ch-checkbox" data-url="${escapeHtml(ch.url)}" ${isChecked ? 'checked' : ''}>
                             <div class="channel-name"><span>📺</span><span>${escapeHtml(ch.name)}</span></div>
@@ -1280,16 +1192,11 @@
                                 <button class="icon-btn save-stream-btn" title="Сохранить поток">💾</button>
                             </div>`;
                         item.addEventListener('click', (e) => {
-                            if (e.target.classList.contains('ch-checkbox') || e.target.closest(
-                                    '.save-stream-btn')) return;
+                            if (e.target.classList.contains('ch-checkbox') || e.target.closest('.save-stream-btn')) return;
                             playChannel(originalIndex);
                         });
                         item.querySelector('.ch-checkbox').addEventListener('change', (e) => {
-                            if (e.target.checked) {
-                                selectedChannelUrls.add(ch.url);
-                            } else {
-                                selectedChannelUrls.delete(ch.url);
-                            }
+                            e.target.checked ? selectedChannelUrls.add(ch.url) : selectedChannelUrls.delete(ch.url);
                         });
                         item.querySelector('.save-stream-btn').addEventListener('click', (e) => {
                             e.stopPropagation();
@@ -1313,8 +1220,7 @@
                     const div = document.createElement('div');
                     div.className = 'saved-item';
                     const typeIcon = item.type === 'playlist' ? '📋' : item.type === 'epg' ? '📅' : '🔗';
-                    const typeLabel = item.type === 'playlist' ? 'Плейлист' : item.type === 'epg' ? 'EPG' :
-                        'Поток';
+                    const typeLabel = item.type === 'playlist' ? 'Плейлист' : item.type === 'epg' ? 'EPG' : 'Поток';
                     div.innerHTML = `
                         <div class="saved-info">
                             <div class="saved-name">${typeIcon} ${escapeHtml(item.name || 'Без имени')}</div>
@@ -1326,16 +1232,12 @@
                             <button class="btn btn-small btn-danger delete-saved-btn">🗑️</button>
                         </div>`;
                     div.querySelector('.load-saved-btn').addEventListener('click', () => loadSavedItem(item));
-                    div.querySelector('.delete-saved-btn').addEventListener('click', () => removeSavedItem(item
-                        .id));
+                    div.querySelector('.delete-saved-btn').addEventListener('click', () => removeSavedItem(item.id));
                     savedListContainer.appendChild(div);
                 });
             }
 
-            function escapeHtml(text) {
-                return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g,
-                    '&quot;').replace(/'/g, '&#039;');
-            }
+            function escapeHtml(text) { return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;'); }
 
             async function decompressGzip(arrayBuffer) {
                 const ds = new DecompressionStream('gzip');
@@ -1346,21 +1248,17 @@
             }
 
             async function handleEpgFile(file) {
-                setStatus('📂 Чтение EPG файла...');
+                setStatus('📂 Чтение EPG...');
                 try {
-                    let text;
-                    if (file.name.endsWith('.gz')) {
-                        const arrayBuffer = await file.arrayBuffer();
-                        text = await decompressGzip(arrayBuffer);
-                    } else { text = await file.text(); }
+                    let text = file.name.endsWith('.gz') ? await decompressGzip(await file.arrayBuffer()) : await file.text();
                     const parsed = parseXmltv(text);
                     epgData = parsed;
                     saveEpgToStorage(epgData);
                     updateEpgStatus();
                     renderChannelList();
-                    setStatus('✅ EPG загружен из файла');
+                    setStatus('✅ EPG загружен');
                     addSavedItem({ type: 'epg', name: 'EPG файл: ' + file.name, url: '', data: epgData });
-                } catch (error) { setStatus(`❌ Ошибка чтения EPG: ${error.message}`, true); }
+                } catch (error) { setStatus(`❌ Ошибка EPG: ${error.message}`, true); }
             }
 
             async function fetchEpgFromUrl(url) {
@@ -1376,14 +1274,11 @@
                     renderChannelList();
                     setStatus('✅ EPG загружен');
                     addSavedItem({ type: 'epg', name: 'EPG: ' + (url.split('/').pop() || url), url: url, data: epgData });
-                } catch (error) { setStatus(`❌ Ошибка загрузки EPG: ${error.message}`, true); }
+                } catch (error) { setStatus(`❌ Ошибка EPG: ${error.message}`, true); }
             }
 
             function exportSelectedChannels() {
-                if (selectedChannelUrls.size === 0) {
-                    setStatus('⚠️ Не выбрано ни одного канала', true);
-                    return;
-                }
+                if (selectedChannelUrls.size === 0) { setStatus('⚠️ Ничего не выбрано', true); return; }
                 const selected = channels.filter(ch => selectedChannelUrls.has(ch.url));
                 let m3uContent = '#EXTM3U\n';
                 for (const ch of selected) {
@@ -1393,27 +1288,21 @@
                     extinf += `,${ch.name}`;
                     m3uContent += extinf + '\n' + ch.url + '\n';
                 }
-                const name = prompt('Название для нового плейлиста:', 'Мой плейлист');
+                const name = prompt('Название плейлиста:', 'Мой плейлист');
                 if (name) {
-                    addSavedItem({ type: 'playlist', name: name, url: '', data: m3uContent, channels: selected
-                            .length });
+                    addSavedItem({ type: 'playlist', name: name, url: '', data: m3uContent, channels: selected.length });
                     const blob = new Blob([m3uContent], { type: 'audio/x-mpegurl' });
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
-                    a.href = url;
-                    a.download = name.replace(/[^a-zа-я0-9]/gi, '_') + '.m3u';
-                    a.click();
-                    URL.revokeObjectURL(url);
+                    a.href = url; a.download = name.replace(/[^a-zа-я0-9]/gi, '_') + '.m3u';
+                    a.click(); URL.revokeObjectURL(url);
                     setStatus(`💾 Экспортировано ${selected.length} каналов`);
                 }
             }
 
             function removeSelectedChannels() {
-                if (selectedChannelUrls.size === 0) {
-                    setStatus('⚠️ Не выбрано ни одного канала', true);
-                    return;
-                }
-                if (!confirm(`Удалить ${selectedChannelUrls.size} выбранных каналов из текущего списка?`)) return;
+                if (selectedChannelUrls.size === 0) { setStatus('⚠️ Ничего не выбрано', true); return; }
+                if (!confirm(`Удалить ${selectedChannelUrls.size} каналов?`)) return;
                 channels = channels.filter(ch => !selectedChannelUrls.has(ch.url));
                 selectedChannelUrls.clear();
                 if (activeChannelIndex >= channels.length) activeChannelIndex = -1;
@@ -1421,79 +1310,61 @@
                 setStatus(`🗑️ Удалено. Осталось ${channels.length} каналов`);
             }
 
-            // --- Обработчики событий ---
-            searchInput.addEventListener('input', (e) => {
-                currentSearchQuery = e.target.value.trim();
-                renderChannelList();
-            });
-            clearSearchBtn.addEventListener('click', () => {
-                searchInput.value = '';
-                currentSearchQuery = '';
-                renderChannelList();
-            });
-
+            // Обработчики UI
+            searchInput.addEventListener('input', (e) => { currentSearchQuery = e.target.value.trim(); renderChannelList(); });
+            clearSearchBtn.addEventListener('click', () => { searchInput.value = ''; currentSearchQuery = ''; renderChannelList(); });
             groupFilterSelect.addEventListener('change', () => renderChannelList());
-
             selectAllChBtn.addEventListener('click', () => {
-                let visibleChannels = channels;
-                if (currentSearchQuery) {
-                    const q = currentSearchQuery.toLowerCase();
-                    visibleChannels = channels.filter(ch => ch.name.toLowerCase().includes(q));
-                }
-                const selGroup = groupFilterSelect.value;
-                if (selGroup !== 'all') visibleChannels = visibleChannels.filter(ch => (ch.group || 'Без группы') ===
-                    selGroup);
-                for (const ch of visibleChannels) selectedChannelUrls.add(ch.url);
+                let visible = currentSearchQuery ? channels.filter(ch => ch.name.toLowerCase().includes(currentSearchQuery.toLowerCase())) : channels;
+                if (groupFilterSelect.value !== 'all') visible = visible.filter(ch => (ch.group || 'Без группы') === groupFilterSelect.value);
+                visible.forEach(ch => selectedChannelUrls.add(ch.url));
                 renderChannelList();
             });
-            deselectAllChBtn.addEventListener('click', () => {
-                selectedChannelUrls.clear();
-                renderChannelList();
-            });
+            deselectAllChBtn.addEventListener('click', () => { selectedChannelUrls.clear(); renderChannelList(); });
             exportSelectedBtn.addEventListener('click', exportSelectedChannels);
             removeSelectedBtn.addEventListener('click', removeSelectedChannels);
 
             loadM3uBtn.addEventListener('click', () => {
                 const url = m3uUrlInput.value.trim();
-                if (url) fetchM3UFromUrl(url, false);
-                else setStatus('⚠️ Введите URL плейлиста', true);
+                if (url) fetchM3UFromUrl(url, false); else setStatus('⚠️ Введите URL', true);
             });
             addM3uBtn.addEventListener('click', () => {
                 const url = m3uUrlInput.value.trim();
-                if (url) fetchM3UFromUrl(url, true);
-                else setStatus('⚠️ Введите URL плейлиста для добавления', true);
+                if (url) fetchM3UFromUrl(url, true); else setStatus('⚠️ Введите URL', true);
             });
-            m3uUrlInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') loadM3uBtn.click();
-            });
+            m3uUrlInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') loadM3uBtn.click(); });
 
-            m3uFileInput.addEventListener('change', (event) => {
-                const file = event.target.files[0];
-                if (!file) return;
-                setStatus('📂 Чтение файла...');
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    loadPlaylistFromText(e.target.result, file.name);
-                    addSavedItem({ type: 'playlist', name: 'Файл: ' + file.name, url: '', data: e.target
-                            .result, channels: channels.length });
-                };
-                reader.onerror = () => setStatus('❌ Ошибка чтения файла', true);
-                reader.readAsText(file, 'UTF-8');
+            // Выбор папки/файлов
+            m3uFileInput.addEventListener('change', async (event) => {
+                const files = event.target.files;
+                if (!files || files.length === 0) return;
+                setStatus('📂 Чтение...');
+                let combinedText = '', fileNames = [];
+                for (let file of files) {
+                    if (/\.(m3u8?|txt)$/i.test(file.name)) {
+                        try {
+                            const text = await file.text();
+                            combinedText += text + '\n';
+                            fileNames.push(file.name);
+                        } catch (err) { console.error(err); }
+                    }
+                }
+                if (combinedText) {
+                    loadPlaylistFromText(combinedText, fileNames.join(', '), null);
+                    addSavedItem({ type: 'playlist', name: 'Файлы: ' + fileNames.join(', '), url: '', data: combinedText, channels: channels.length });
+                } else setStatus('⚠️ m3u файлы не найдены', true);
                 m3uFileInput.value = '';
             });
 
             playDirectBtn.addEventListener('click', () => {
                 const url = directUrlInput.value.trim();
-                if (url) {
-                    playDirectUrl(url, 'Прямой поток');
-                    addSavedItem({ type: 'stream', name: 'Поток: ' + (url.split('/').pop() || url), url: url });
-                }
+                if (url) { playDirectUrl(url, 'Прямой поток'); addSavedItem({ type: 'stream', name: 'Поток: ' + (url.split('/').pop() || url), url: url }); }
             });
             saveDirectBtn.addEventListener('click', () => {
                 const url = directUrlInput.value.trim();
-                if (!url) { setStatus('⚠️ Введите URL потока', true); return; }
-                const name = prompt('Название потока:', url.split('/').pop() || 'Поток');
-                if (name) addSavedItem({ type: 'stream', name: name, url: url });
+                if (!url) { setStatus('⚠️ Введите URL', true); return; }
+                const name = prompt('Название:', url.split('/').pop() || 'Поток');
+                if (name) addSavedItem({ type: 'stream', name, url });
             });
             addDirectToPlaylistBtn.addEventListener('click', () => {
                 const url = directUrlInput.value.trim();
@@ -1504,71 +1375,39 @@
 
             loadEpgBtn.addEventListener('click', () => {
                 const url = epgUrlInput.value.trim();
-                if (url) fetchEpgFromUrl(url);
-                else setStatus('⚠️ Введите URL EPG', true);
+                if (url) fetchEpgFromUrl(url); else setStatus('⚠️ Введите URL EPG', true);
             });
-            epgFileInput.addEventListener('change', (event) => {
-                const file = event.target.files[0];
-                if (!file) return;
-                handleEpgFile(file);
-                epgFileInput.value = '';
-            });
+            epgFileInput.addEventListener('change', (e) => { if (e.target.files[0]) handleEpgFile(e.target.files[0]); epgFileInput.value = ''; });
             epgUrlInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') loadEpgBtn.click(); });
 
             exportAllBtn.addEventListener('click', () => {
                 const items = getSavedItems();
-                if (items.length === 0) { setStatus('⚠️ Нет данных для экспорта', true); return; }
-                const exportData = JSON.stringify(items, null, 2);
-                const blob = new Blob([exportData], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
+                if (!items.length) { setStatus('⚠️ Нет данных', true); return; }
+                const blob = new Blob([JSON.stringify(items, null, 2)], { type: 'application/json' });
                 const a = document.createElement('a');
-                a.href = url;
-                a.download = 'iptv_backup_' + new Date().toISOString().slice(0, 10) + '.json';
-                a.click();
-                URL.revokeObjectURL(url);
-                setStatus('📤 Экспортировано!');
+                a.href = URL.createObjectURL(blob);
+                a.download = 'iptv_backup_' + new Date().toISOString().slice(0,10) + '.json';
+                a.click(); URL.revokeObjectURL(a.href);
+                setStatus('📤 Экспортировано');
             });
             clearAllBtn.addEventListener('click', () => {
-                if (confirm('Удалить ВСЕ сохранённые элементы? Это действие нельзя отменить.')) {
-                    saveItems([]);
-                    renderSavedItems();
-                    setStatus('🗑️ Всё очищено');
-                }
+                if (confirm('Удалить ВСЕ сохранённые элементы?')) { saveItems([]); renderSavedItems(); setStatus('🗑️ Очищено'); }
             });
 
-            // Футер
-            footerLink.addEventListener('click', () => {
-                navigator.clipboard.writeText(FOOTER_URL).then(() => setStatus('📋 Ссылка скопирована!')).catch(
-                    () => setStatus('⚠️ Не удалось скопировать', true));
-            });
-            copyFooterBtn.addEventListener('click', () => {
-                navigator.clipboard.writeText(FOOTER_URL).then(() => setStatus('📋 Ссылка скопирована!')).catch(
-                    () => setStatus('⚠️ Не удалось скопировать', true));
-            });
-            loadFooterBtn.addEventListener('click', () => {
-                m3uUrlInput.value = FOOTER_URL;
-                fetchM3UFromUrl(FOOTER_URL, false);
-                switchTab('playlist');
-            });
-            addFooterBtn.addEventListener('click', () => {
-                m3uUrlInput.value = FOOTER_URL;
-                fetchM3UFromUrl(FOOTER_URL, true);
-                switchTab('playlist');
-            });
+            footerLink.addEventListener('click', () => navigator.clipboard.writeText(FOOTER_URL).then(() => setStatus('📋 Скопировано'), () => setStatus('⚠️ Не удалось скопировать', true)));
+            copyFooterBtn.addEventListener('click', () => navigator.clipboard.writeText(FOOTER_URL).then(() => setStatus('📋 Скопировано'), () => setStatus('⚠️ Не удалось скопировать', true)));
+            loadFooterBtn.addEventListener('click', () => { m3uUrlInput.value = FOOTER_URL; fetchM3UFromUrl(FOOTER_URL, false); switchTab('playlist'); });
+            addFooterBtn.addEventListener('click', () => { m3uUrlInput.value = FOOTER_URL; fetchM3UFromUrl(FOOTER_URL, true); switchTab('playlist'); });
 
             video.style.display = 'none';
             noStreamDiv.style.display = 'flex';
             setStatus('🟢 Готов к работе');
-
             video.addEventListener('error', () => {
-                const name = activeChannelIndex >= 0 && channels[activeChannelIndex] ? channels[activeChannelIndex]
-                    .name : 'поток';
+                const name = activeChannelIndex >= 0 && channels[activeChannelIndex] ? channels[activeChannelIndex].name : 'поток';
                 setStatus(`❌ Ошибка: ${name}`, true);
             });
             video.addEventListener('playing', () => {
-                if (activeChannelIndex >= 0 && channels[activeChannelIndex]) {
-                    setStatus(`▶️ ${channels[activeChannelIndex].name}`);
-                }
+                if (activeChannelIndex >= 0 && channels[activeChannelIndex]) setStatus(`▶️ ${channels[activeChannelIndex].name}`);
             });
 
             epgData = loadEpgFromStorage();
@@ -1581,17 +1420,14 @@
                 const diff = touchStartX - e.changedTouches[0].clientX;
                 if (Math.abs(diff) > 80) {
                     const tabs = ['playlist', 'saved', 'direct', 'epg'];
-                    const currentTab = document.querySelector('.tab-btn.active')?.dataset.tab;
-                    const idx = tabs.indexOf(currentTab);
+                    const idx = tabs.indexOf(document.querySelector('.tab-btn.active')?.dataset.tab);
                     if (diff > 0 && idx < tabs.length - 1) switchTab(tabs[idx + 1]);
                     else if (diff < 0 && idx > 0) switchTab(tabs[idx - 1]);
                 }
             });
             document.addEventListener('keydown', (e) => {
-                if (e.code === 'ArrowLeft' && video.duration) video.currentTime = Math.max(0, video.currentTime -
-                    10);
-                else if (e.code === 'ArrowRight' && video.duration) video.currentTime = Math.min(video.duration,
-                    video.currentTime + 10);
+                if (e.code === 'ArrowLeft' && video.duration) video.currentTime = Math.max(0, video.currentTime - 10);
+                else if (e.code === 'ArrowRight' && video.duration) video.currentTime = Math.min(video.duration, video.currentTime + 10);
             });
         })();
     </script>
